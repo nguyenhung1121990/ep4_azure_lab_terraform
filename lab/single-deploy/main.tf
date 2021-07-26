@@ -24,6 +24,24 @@ resource "random_password" "password" {
   override_special = "_%@"
 }
 
+resource "random_integer" "r_number" {
+  min = 10000
+  max = 50000
+  #keepers = {
+  # Generate a new integer each time we switch to a new listener ARN
+  # listener_arn = "${var.listener_arn}"
+  #}
+}
+
+#sanumber = random_integer.r_number.result
+
+##Peered VNet RG #####
+
+#|resource "azurerm_resource_group" "example" {
+#  name     = "peeredvnets-rg"
+#  location = "West US"
+# }
+
 ########### Management 1  ###########
 resource "azurerm_resource_group" "resourcegroup_1" {
   name     = "${local.name_1}-${local.locationid[0]}-rg-1"
@@ -62,6 +80,24 @@ resource "azurerm_subnet" "subnet_2" {
   virtual_network_name = azurerm_virtual_network.virtualnetwork_2.name
   resource_group_name  = azurerm_resource_group.resourcegroup_2.name
   address_prefixes     = ["10.0.1.0/24"]
+}
+
+
+
+###########Customized VNet Peering ###########
+
+resource "azurerm_virtual_network_peering" "virtualnetwork_1" {
+  name                      = "peer1to2"
+  resource_group_name       = azurerm_resource_group.resourcegroup_1.name #old: azurerm_resource_group.example.name
+  virtual_network_name      = azurerm_virtual_network.virtualnetwork_1.name
+  remote_virtual_network_id = azurerm_virtual_network.virtualnetwork_2.id
+}
+
+resource "azurerm_virtual_network_peering" "virtualnetwork_2" {
+  name                      = "peer2to1"
+  resource_group_name       = azurerm_resource_group.resourcegroup_2.name #old: azurerm_resource_group.example.name
+  virtual_network_name      = azurerm_virtual_network.virtualnetwork_2.name
+  remote_virtual_network_id = azurerm_virtual_network.virtualnetwork_1.id
 }
 
 ########### Log Analytics Workspace ###########
@@ -201,7 +237,7 @@ resource "azurerm_key_vault_secret" "workspacekey" {
 
 ########### Storage Account ###########
 resource "azurerm_storage_account" "storage_1" {
-  name                     = "${local.name_1}storage1"
+  name                     = "storage1${local.name_1}${random_integer.r_number.result}"
   resource_group_name      = azurerm_resource_group.resourcegroup_1.name
   location                 = azurerm_resource_group.resourcegroup_1.location
   account_tier             = "Standard"
@@ -209,7 +245,7 @@ resource "azurerm_storage_account" "storage_1" {
 }
 
 resource "azurerm_storage_account" "storage_2" {
-  name                     = "${local.name_2}storage2"
+  name                     = "storage2${local.name_2}${random_integer.r_number.result}"
   resource_group_name      = azurerm_resource_group.resourcegroup_2.name
   location                 = azurerm_resource_group.resourcegroup_2.location
   account_tier             = "Standard"
